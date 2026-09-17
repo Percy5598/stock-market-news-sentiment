@@ -1,0 +1,2 @@
+date,article_count,mean_sentiment,median_sentiment,sentiment_std,positive_articles,negative_articles,neutral_articles,positive_pct,negative_pct,neutral_pct,sentiment_intensity,open,high,low,close,volume,return,next_day_return,five_day_forward_return
+2026-09-15,5,-0.0522799999999999,0.1882,0.4392135778866586,3,2,0,0.6,0.4,0.0,0.0522799999999999,7612.2998046875,7617.259765625,7572.68994140625,7585.72998046875,5154930000,,,

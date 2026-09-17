@@ -3,3 +3,6 @@ pandas
 python-dotenv
 vaderSentiment
 yfinance
+streamlit
+plotly
+scipy
