@@ -5,7 +5,22 @@ analyzer = SentimentIntensityAnalyzer()
 
 
 def analyze_sentiment(text):
-    scores = analyzer.polarity_scores(text)
+    """
+    Analyze text using VADER.
+
+    Returns sentiment scores and classification.
+    """
+
+    if not text or not str(text).strip():
+        return {
+            "score": 0.0,
+            "label": "Neutral",
+            "positive": 0.0,
+            "negative": 0.0,
+            "neutral": 1.0,
+        }
+
+    scores = analyzer.polarity_scores(str(text))
 
     compound = scores["compound"]
 
@@ -19,4 +34,7 @@ def analyze_sentiment(text):
     return {
         "score": compound,
         "label": label,
+        "positive": scores["pos"],
+        "negative": scores["neg"],
+        "neutral": scores["neu"],
     }
