@@ -12,12 +12,24 @@ API_KEY = os.getenv("GNEWS_API_KEY")
 URL = "https://gnews.io/api/v4/search"
 
 
-def get_financial_news(max_articles=10):
+def get_financial_news(
+    max_articles=10,
+    from_date=None,
+    to_date=None,
+):
     """
     Fetch financial news articles from GNews.
 
-    Returns:
-        list[dict]: Raw article records.
+    Parameters
+    ----------
+    max_articles : int
+        Maximum number of articles to request.
+
+    from_date : str, optional
+        Start date/time in ISO format.
+
+    to_date : str, optional
+        End date/time in ISO format.
     """
 
     if not API_KEY:
@@ -34,6 +46,12 @@ def get_financial_news(max_articles=10):
         "apikey": API_KEY,
     }
 
+    if from_date:
+        params["from"] = from_date
+
+    if to_date:
+        params["to"] = to_date
+
     response = requests.get(
         URL,
         params=params,
@@ -46,23 +64,41 @@ def get_financial_news(max_articles=10):
 
     articles = data.get("articles", [])
 
-    fetched_at = datetime.now(timezone.utc).isoformat()
+    fetched_at = datetime.now(
+        timezone.utc
+    ).isoformat()
 
     records = []
 
     for article in articles:
 
-        source = article.get("source") or {}
+        source = article.get(
+            "source"
+        ) or {}
 
         records.append(
             {
-                "title": article.get("title"),
-                "description": article.get("description"),
-                "content": article.get("content"),
-                "url": article.get("url"),
-                "published_at": article.get("publishedAt"),
-                "source_name": source.get("name"),
-                "source_url": source.get("url"),
+                "title": article.get(
+                    "title"
+                ),
+                "description": article.get(
+                    "description"
+                ),
+                "content": article.get(
+                    "content"
+                ),
+                "url": article.get(
+                    "url"
+                ),
+                "published_at": article.get(
+                    "publishedAt"
+                ),
+                "source_name": source.get(
+                    "name"
+                ),
+                "source_url": source.get(
+                    "url"
+                ),
                 "fetched_at": fetched_at,
             }
         )
