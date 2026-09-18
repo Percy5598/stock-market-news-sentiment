@@ -8,23 +8,8 @@ def get_market_data(
     end=None,
 ):
     """
-    Download historical market data.
-
-    Parameters
-    ----------
-    ticker : str
-        Yahoo Finance ticker symbol.
-
-    start : str
-        Start date, e.g. "2026-01-01".
-
-    end : str
-        End date.
-
-    Returns
-    -------
-    pandas.DataFrame
-        Historical market prices and returns.
+    Download historical market data and calculate
+    trading-session returns.
     """
 
     data = yf.download(
@@ -40,13 +25,17 @@ def get_market_data(
             f"No market data returned for {ticker}."
         )
 
-    # yfinance can return MultiIndex columns
-    if isinstance(data.columns, pd.MultiIndex):
-        data.columns = data.columns.get_level_values(0)
+    if isinstance(
+        data.columns,
+        pd.MultiIndex,
+    ):
+        data.columns = (
+            data.columns
+            .get_level_values(0)
+        )
 
     data = data.reset_index()
 
-    # Standardize column names
     data.columns = [
         str(column).lower()
         for column in data.columns
@@ -55,22 +44,30 @@ def get_market_data(
     data["date"] = pd.to_datetime(
         data["date"],
         errors="coerce",
-    ).dt.date
+    )
 
-    # Daily close-to-close return
+    data = data.dropna(
+        subset=["date"]
+    )
+
+    data = data.sort_values(
+        "date"
+    )
+
+    # Close-to-close return
     data["return"] = (
         data["close"]
         .pct_change()
     )
 
-    # Next trading-day return
-    data["next_day_return"] = (
+    # Return during the next actual trading session
+    data["next_trading_day_return"] = (
         data["return"]
         .shift(-1)
     )
 
-    # Five-trading-day forward return
-    data["five_day_forward_return"] = (
+    # Five-trading-session forward return
+    data["five_trading_day_forward_return"] = (
         data["close"]
         .shift(-5)
         / data["close"]
@@ -86,8 +83,7 @@ def get_market_data(
             "close",
             "volume",
             "return",
-            "next_day_return",
-            "five_day_forward_return",
+            "next_trading_day_return",
+            "five_trading_day_forward_return",
         ]
     ]
-

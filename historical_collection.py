@@ -5,14 +5,27 @@ from src.data.preprocessing import articles_to_dataframe
 from src.data.collector import append_news_data
 
 
-START_DATE = "2026-08-18"
+START_DATE = "2026-09-17"
 END_DATE = "2026-09-17"
 
-ARTICLES_PER_DAY = 10
+ARTICLES_PER_QUERY = 10
+
+QUERIES = [
+    "stock market",
+    "S&P 500",
+    "Wall Street",
+    "Federal Reserve",
+    "interest rates",
+    "Treasury yields",
+    "inflation",
+    "US economy",
+    "stock earnings",
+    "corporate earnings",
+    "oil prices",
+]
 
 
 def main():
-
     start = datetime.strptime(
         START_DATE,
         "%Y-%m-%d",
@@ -25,7 +38,7 @@ def main():
 
     current = start
 
-    total_collected = 0
+    total_retrieved = 0
 
     print("\n==============================")
     print("HISTORICAL NEWS COLLECTION")
@@ -33,9 +46,7 @@ def main():
 
     while current <= end:
 
-        next_day = current + timedelta(
-            days=1
-        )
+        next_day = current + timedelta(days=1)
 
         from_date = (
             current.strftime(
@@ -50,52 +61,63 @@ def main():
         )
 
         print(
-            f"Collecting {current.strftime('%Y-%m-%d')}..."
+            f"\nDATE: "
+            f"{current.strftime('%Y-%m-%d')}"
         )
 
-        try:
+        for query in QUERIES:
 
-            articles = get_financial_news(
-                max_articles=ARTICLES_PER_DAY,
-                from_date=from_date,
-                to_date=to_date,
+            print(
+                f"  Query: {query}"
             )
 
-            df = articles_to_dataframe(
-                articles
-            )
+            try:
 
-            if not df.empty:
+                articles = get_financial_news(
+                    query=query,
+                    max_articles=ARTICLES_PER_QUERY,
+                    from_date=from_date,
+                    to_date=to_date,
+                )
+
+                df = articles_to_dataframe(
+                    articles
+                )
+
+                if df.empty:
+
+                    print(
+                        "    Retrieved: 0"
+                    )
+
+                    continue
+
+                df["collection_query"] = query
 
                 append_news_data(df)
 
-                total_collected += len(df)
+                total_retrieved += len(df)
 
                 print(
-                    f"  Retrieved: {len(df)}"
+                    f"    Retrieved: "
+                    f"{len(df)}"
                 )
 
-            else:
+            except Exception as error:
 
                 print(
-                    "  No articles found."
+                    f"    ERROR: {error}"
                 )
 
-        except Exception as error:
+        current += timedelta(days=1)
 
-            print(
-                f"  ERROR: {error}"
-            )
-
-        current = next_day
+    print("\n==============================")
+    print("COLLECTION COMPLETED")
+    print("==============================")
 
     print(
-        "\nCollection completed."
-    )
-
-    print(
-        f"Articles retrieved across requests: "
-        f"{total_collected}"
+        f"\nArticles retrieved: "
+        f"{total_retrieved}"
     )
 
 

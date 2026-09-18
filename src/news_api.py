@@ -13,6 +13,7 @@ URL = "https://gnews.io/api/v4/search"
 
 
 def get_financial_news(
+    query="stock market",
     max_articles=10,
     from_date=None,
     to_date=None,
@@ -39,7 +40,7 @@ def get_financial_news(
         )
 
     params = {
-        "q": "stock market OR stocks OR Wall Street",
+        "q": query,
         "lang": "en",
         "country": "us",
         "max": max_articles,
