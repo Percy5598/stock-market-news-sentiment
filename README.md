@@ -1,34 +1,86 @@
-# Stock Market News Sentiment
+# Financial News Sentiment and Market Dynamics
 
-A small Python project that collects financial news using the GNews API and analyzes headline sentiment with VADER.
+An end-to-end NLP and financial analytics project examining the relationship between financial-news sentiment and US equity-market dynamics.
 
-## Pipeline
+## Research question
+
+How is the sentiment of financial news associated with subsequent S&P 500 market returns after accounting for publication timing and trading-session structure?
+
+## Project architecture
+
+News API
+↓
+Data collection
+↓
+Preprocessing
+↓
+Deduplication
+↓
+VADER sentiment
+↓
+Publication-time classification
+↓
+Trading-session alignment
+↓
+S&P 500 market data
+↓
+Session-level feature engineering
+↓
+Exploratory analysis
+↓
+Streamlit dashboard
+
+## Technologies
+
+- Python
+- Pandas
+- VADER
+- GNews API
+- yfinance
+- Plotly
+- Streamlit
+- pytest
+
+## Project structure
 
 ```text
-GNews API → News Headlines → VADER → Sentiment Score → Market Mood
-```
-
-## Tech Stack
-
-* Python
-* GNews API
-* Pandas
-* VADER
-* Requests
-
-## Run
-
-```bash
-pip install -r requirements.txt
-python main.py
-```
-
-Create a `.env` file with:
-
-```text
-GNEWS_API_KEY=your_api_key
-```
-
-## Note
-
-This project measures **financial-news sentiment**, not stock-price predictions or investment signals.
+stock-market-news-sentiment/
+│
+├── streamlit_app.py
+├── pipeline.py
+├── historical_collection.py
+├── session_analysis.py
+│
+├── requirements.txt
+├── README.md
+├── .gitignore
+├── .env.example
+│
+├── src/
+│   ├── news_api.py
+│   ├── sentiment.py
+│   │
+│   ├── data/
+│   │   ├── collector.py
+│   │   ├── preprocessing.py
+│   │   ├── process.py
+│   │   ├── market_data.py
+│   │   └── deduplication.py
+│   │
+│   ├── nlp/
+│   │   └── sentiment_pipeline.py
+│   │
+│   └── analysis/
+│       ├── daily_sentiment.py
+│       ├── temporal_alignment.py
+│       ├── market_sentiment.py
+│       └── session_features.py
+│
+├── data/
+│   ├── raw/
+│   └── processed/
+│
+└── tests/
+    ├── test_sentiment.py
+    ├── test_preprocessing.py
+    └── test_temporal_alignment.py

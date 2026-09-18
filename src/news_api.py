@@ -7,44 +7,56 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-API_KEY = os.getenv("GNEWS_API_KEY")
+GNEWS_URL = "https://gnews.io/api/v4/search"
 
-URL = "https://gnews.io/api/v4/search"
+
+class GNewsAPIError(RuntimeError):
+    """Raised when the GNews API request fails."""
 
 
 def get_financial_news(
-    query="stock market",
-    max_articles=10,
-    from_date=None,
-    to_date=None,
-):
+    query: str = "stock market",
+    max_articles: int = 10,
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> list[dict]:
     """
-    Fetch financial news articles from GNews.
+    Retrieve financial/news articles from GNews.
 
     Parameters
     ----------
-    max_articles : int
-        Maximum number of articles to request.
+    query:
+        GNews search query.
+    max_articles:
+        Maximum number of articles requested.
+    from_date:
+        Optional ISO-8601 start timestamp.
+    to_date:
+        Optional ISO-8601 end timestamp.
 
-    from_date : str, optional
-        Start date/time in ISO format.
-
-    to_date : str, optional
-        End date/time in ISO format.
+    Returns
+    -------
+    list[dict]
+        Normalized article records.
     """
 
-    if not API_KEY:
-        raise ValueError(
+    api_key = os.getenv("GNEWS_API_KEY")
+
+    if not api_key:
+        raise GNewsAPIError(
             "GNEWS_API_KEY is not set. "
-            "Add it to your .env file."
+            "Create a .env file and add your API key."
         )
+
+    if max_articles < 1:
+        raise ValueError("max_articles must be at least 1.")
 
     params = {
         "q": query,
         "lang": "en",
         "country": "us",
         "max": max_articles,
-        "apikey": API_KEY,
+        "apikey": api_key,
     }
 
     if from_date:
@@ -53,17 +65,36 @@ def get_financial_news(
     if to_date:
         params["to"] = to_date
 
-    response = requests.get(
-        URL,
-        params=params,
-        timeout=10,
-    )
+    try:
+        response = requests.get(
+            GNEWS_URL,
+            params=params,
+            timeout=20,
+        )
+    except requests.RequestException as error:
+        raise GNewsAPIError(
+            f"Network error while contacting GNews: {error}"
+        ) from error
 
-    response.raise_for_status()
+    if response.status_code != 200:
+        try:
+            detail = response.json()
+        except ValueError:
+            detail = response.text[:500]
 
-    data = response.json()
+        raise GNewsAPIError(
+            f"GNews request failed with HTTP "
+            f"{response.status_code}: {detail}"
+        )
 
-    articles = data.get("articles", [])
+    try:
+        payload = response.json()
+    except ValueError as error:
+        raise GNewsAPIError(
+            "GNews returned an invalid JSON response."
+        ) from error
+
+    articles = payload.get("articles", [])
 
     fetched_at = datetime.now(
         timezone.utc
@@ -73,33 +104,17 @@ def get_financial_news(
 
     for article in articles:
 
-        source = article.get(
-            "source"
-        ) or {}
+        source = article.get("source") or {}
 
         records.append(
             {
-                "title": article.get(
-                    "title"
-                ),
-                "description": article.get(
-                    "description"
-                ),
-                "content": article.get(
-                    "content"
-                ),
-                "url": article.get(
-                    "url"
-                ),
-                "published_at": article.get(
-                    "publishedAt"
-                ),
-                "source_name": source.get(
-                    "name"
-                ),
-                "source_url": source.get(
-                    "url"
-                ),
+                "title": article.get("title"),
+                "description": article.get("description"),
+                "content": article.get("content"),
+                "url": article.get("url"),
+                "published_at": article.get("publishedAt"),
+                "source_name": source.get("name"),
+                "source_url": source.get("url"),
                 "fetched_at": fetched_at,
             }
         )

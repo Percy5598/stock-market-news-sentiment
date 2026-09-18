@@ -1,10 +1,16 @@
 import re
-
-import pandas as pd
 from difflib import SequenceMatcher
 
+import pandas as pd
 
-def normalize_title(title):
+
+def normalize_title(
+    title: str,
+) -> str:
+    """
+    Normalize a headline for similarity comparison.
+    """
+
     if pd.isna(title):
         return ""
 
@@ -20,12 +26,19 @@ def normalize_title(title):
         r"\s+",
         " ",
         text,
-    ).strip()
+    )
 
-    return text
+    return text.strip()
 
 
-def title_similarity(title_a, title_b):
+def title_similarity(
+    title_a: str,
+    title_b: str,
+) -> float:
+    """
+    Calculate normalized title similarity.
+    """
+
     return SequenceMatcher(
         None,
         normalize_title(title_a),
@@ -33,30 +46,53 @@ def title_similarity(title_a, title_b):
     ).ratio()
 
 
-def add_duplicate_flags(df):
+def add_duplicate_flags(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+
     data = df.copy()
 
     data["normalized_title"] = (
-        data["title"].apply(normalize_title)
+        data["title"]
+        .apply(normalize_title)
     )
 
     data["exact_title_duplicate"] = (
         data["normalized_title"]
-        .duplicated(keep=False)
+        .duplicated(
+            keep=False
+        )
     )
 
-    data["url_duplicate"] = (
-        data["url"].duplicated(keep=False)
-    )
+    if "url" in data.columns:
+
+        data["url_duplicate"] = (
+            data["url"]
+            .duplicated(
+                keep=False
+            )
+        )
+
+    else:
+
+        data["url_duplicate"] = False
 
     return data
 
 
 def find_near_duplicate_titles(
-    df,
-    threshold=0.90,
-):
-    data = df.copy()
+    df: pd.DataFrame,
+    threshold: float = 0.90,
+) -> pd.DataFrame:
+    """
+    Find potentially syndicated or near-duplicate headlines.
+
+    This is an audit tool rather than an automatic deletion rule.
+    """
+
+    data = df.reset_index(
+        drop=True
+    )
 
     titles = (
         data["title"]
@@ -67,14 +103,22 @@ def find_near_duplicate_titles(
 
     matches = []
 
-    for i in range(len(titles)):
-        for j in range(i + 1, len(titles)):
+    for i in range(
+        len(titles)
+    ):
+
+        for j in range(
+            i + 1,
+            len(titles),
+        ):
+
             similarity = title_similarity(
                 titles[i],
                 titles[j],
             )
 
             if similarity >= threshold:
+
                 matches.append(
                     {
                         "index_a": i,
@@ -85,4 +129,6 @@ def find_near_duplicate_titles(
                     }
                 )
 
-    return pd.DataFrame(matches)
+    return pd.DataFrame(
+        matches
+    )

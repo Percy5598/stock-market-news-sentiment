@@ -1,17 +1,14 @@
 import pandas as pd
 
-from src.analysis.temporal_alignment import (
-    prepare_temporal_news_data,
-)
-
 from src.analysis.market_sentiment import (
     align_news_to_trading_sessions,
 )
-
 from src.analysis.session_features import (
     create_session_features,
 )
-
+from src.analysis.temporal_alignment import (
+    prepare_temporal_news_data,
+)
 from src.data.market_data import (
     get_market_data,
 )
@@ -35,61 +32,63 @@ def main():
         "TRADING SESSION ANALYSIS"
     )
     print(
-        "==============================\n"
+        "=============================="
     )
 
-    # --------------------------------------------------
-    # Load news
-    # --------------------------------------------------
-
-    print("1. Loading news...")
+    print(
+        "\n1. Loading processed news..."
+    )
 
     news = pd.read_csv(
         NEWS_PATH
     )
 
+    if news.empty:
+
+        raise ValueError(
+            "Processed news dataset is empty."
+        )
+
     print(
         f"   Articles: {len(news)}"
     )
 
-    # --------------------------------------------------
-    # Prepare timestamps
-    # --------------------------------------------------
-
     print(
-        "\n2. Preparing temporal information..."
+        "\n2. Preparing publication timestamps..."
     )
 
-    news = prepare_temporal_news_data(
-        news
+    news = (
+        prepare_temporal_news_data(
+            news
+        )
     )
-
-    # --------------------------------------------------
-    # Determine market period
-    # --------------------------------------------------
 
     start = (
-        pd.to_datetime(
-            news["published_at_et"]
-        )
+        news[
+            "published_at_et"
+        ]
         .min()
-        .strftime("%Y-%m-%d")
+        .strftime(
+            "%Y-%m-%d"
+        )
     )
 
     end = (
-        pd.to_datetime(
-            news["published_at_et"]
-        ).max()
-        + pd.Timedelta(days=10)
-    ).strftime("%Y-%m-%d")
-
-    print(
-        f"   Market period: {start} → {end}"
+        news[
+            "published_at_et"
+        ]
+        .max()
+        + pd.Timedelta(
+            days=10
+        )
+    ).strftime(
+        "%Y-%m-%d"
     )
 
-    # --------------------------------------------------
-    # Market data
-    # --------------------------------------------------
+    print(
+        f"   Market period: "
+        f"{start} -> {end}"
+    )
 
     print(
         "\n3. Downloading market data..."
@@ -102,81 +101,63 @@ def main():
     )
 
     print(
-        f"   Trading sessions: {len(market)}"
-    )
-
-    # --------------------------------------------------
-    # Align news
-    # --------------------------------------------------
-
-    print(
-        "\n4. Aligning news with trading sessions..."
-    )
-
-    aligned = align_news_to_trading_sessions(
-        news,
-        market,
+        f"   Trading sessions: "
+        f"{len(market)}"
     )
 
     print(
-        f"   Aligned articles: {len(aligned)}"
+        "\n4. Aligning news..."
     )
 
-    # --------------------------------------------------
-    # Aggregate
-    # --------------------------------------------------
-
-    print(
-        "\n5. Creating session-level features..."
-    )
-
-    session = create_session_features(
-        aligned
-    )
-
-    # --------------------------------------------------
-    # Sort
-    # --------------------------------------------------
-
-    session = session.sort_values(
-        "date"
-    ).reset_index(
-        drop=True
-    )
-
-    # --------------------------------------------------
-    # Save
-    # --------------------------------------------------
-
-    session.to_csv(
-        OUTPUT_PATH,
-        index=False,
-    )
-
-    print(
-        f"\n6. Saved dataset:"
-    )
-
-    print(
-        f"   {OUTPUT_PATH}"
-    )
-
-    # --------------------------------------------------
-    # Summary
-    # --------------------------------------------------
-
-    print(
-        "\n=== SESSION DATASET ===\n"
-    )
-
-    print(
-        session.to_string(
-            index=False
+    aligned = (
+        align_news_to_trading_sessions(
+            news,
+            market,
         )
     )
 
     print(
-        "\n=== DATASET SHAPE ==="
+        f"   Aligned articles: "
+        f"{len(aligned)}"
+    )
+
+    print(
+        "\n5. Creating session features..."
+    )
+
+    session = (
+        create_session_features(
+            aligned
+        )
+    )
+
+    session = (
+        session
+        .sort_values("date")
+        .reset_index(
+            drop=True
+        )
+    )
+
+    output_path = (
+        OUTPUT_PATH
+    )
+
+    session.to_csv(
+        output_path,
+        index=False,
+    )
+
+    print(
+        "\n6. Dataset saved:"
+    )
+
+    print(
+        f"   {output_path}"
+    )
+
+    print(
+        "\nDataset shape:"
     )
 
     print(
@@ -184,7 +165,7 @@ def main():
     )
 
     print(
-        "\n=== MISSING VALUES ==="
+        "\nMissing values:"
     )
 
     print(

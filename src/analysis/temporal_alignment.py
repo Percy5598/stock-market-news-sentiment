@@ -1,43 +1,93 @@
 import pandas as pd
 
 
-def prepare_news_timestamps(df):
+NEW_YORK_TIMEZONE = (
+    "America/New_York"
+)
+
+
+def prepare_temporal_news_data(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Convert publication timestamps to US Eastern Time.
+    """
+
     data = df.copy()
 
-    data["published_at"] = pd.to_datetime(
-        data["published_at"],
-        errors="coerce",
-        utc=True,
+    data["published_at"] = (
+        pd.to_datetime(
+            data["published_at"],
+            errors="coerce",
+            utc=True,
+        )
     )
 
     data = data.dropna(
-        subset=["published_at"]
+        subset=[
+            "published_at"
+        ]
     )
 
-    data["published_at_et"] = (
-        data["published_at"]
-        .dt.tz_convert("America/New_York")
+    data[
+        "published_at_et"
+    ] = (
+        data[
+            "published_at"
+        ].dt.tz_convert(
+            NEW_YORK_TIMEZONE
+        )
     )
 
-    data["publication_date"] = (
-        data["published_at_et"]
-        .dt.date
+    data[
+        "publication_date"
+    ] = (
+        data[
+            "published_at_et"
+        ].dt.date
     )
 
-    data["publication_time"] = (
-        data["published_at_et"]
-        .dt.time
+    data[
+        "publication_time"
+    ] = (
+        data[
+            "published_at_et"
+        ].dt.time
     )
 
-    data["weekday"] = (
-        data["published_at_et"]
-        .dt.dayofweek
+    data[
+        "weekday"
+    ] = (
+        data[
+            "published_at_et"
+        ].dt.dayofweek
     )
 
-    return data
+    return classify_market_session(
+        data
+    )
 
 
-def classify_market_session(df):
+def classify_market_session(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Classify publication timing relative
+    to regular US equity-market hours.
+
+    09:30–16:00 ET:
+        market_hours
+
+    Before 09:30 ET:
+        pre_market
+
+    After 16:00 ET:
+        after_market
+
+    Saturday/Sunday:
+        non_trading_day
+    """
+
     data = df.copy()
 
     market_open = pd.Timestamp(
@@ -48,22 +98,25 @@ def classify_market_session(df):
         "16:00"
     ).time()
 
-    time = data["published_at_et"].dt.time
-
-    # Monday = 0
-    # Friday = 4
-    # Saturday = 5
-    # Sunday = 6
-
-    weekday = (
-        data["published_at_et"]
-        .dt.dayofweek
+    publication_time = (
+        data[
+            "published_at_et"
+        ].dt.time
     )
 
-    # Weekends are not trading sessions.
-    data["market_session"] = "non_trading_day"
+    weekday = (
+        data[
+            "published_at_et"
+        ].dt.dayofweek
+    )
 
-    weekday_mask = weekday < 5
+    data[
+        "market_session"
+    ] = "non_trading_day"
+
+    weekday_mask = (
+        weekday < 5
+    )
 
     data.loc[
         weekday_mask,
@@ -72,25 +125,24 @@ def classify_market_session(df):
 
     data.loc[
         weekday_mask
-        & (time < market_open),
+        & (
+            publication_time
+            < market_open
+        ),
         "market_session",
     ] = "pre_market"
 
     data.loc[
         weekday_mask
-        & (time >= market_open)
-        & (time < market_close),
+        & (
+            publication_time
+            >= market_open
+        )
+        & (
+            publication_time
+            < market_close
+        ),
         "market_session",
     ] = "market_hours"
-
-    return data
-
-
-def prepare_temporal_news_data(df):
-    data = prepare_news_timestamps(df)
-
-    data = classify_market_session(
-        data
-    )
 
     return data

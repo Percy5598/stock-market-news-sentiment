@@ -1,103 +1,101 @@
 import pandas as pd
 
 
-def merge_sentiment_with_market(
-    sentiment_df,
-    market_df,
-):
-    """
-    Contemporaneous daily merge.
+def _get_trading_dates(
+    market_df: pd.DataFrame,
+) -> list[str]:
 
-    Matches daily sentiment with the same trading date.
-
-    This is descriptive rather than predictive because
-    news may have been published after the market session
-    began.
-    """
-
-    sentiment = sentiment_df.copy()
     market = market_df.copy()
 
-    sentiment["date"] = (
-        pd.to_datetime(
-            sentiment["date"],
-            errors="coerce",
+    market["date"] = pd.to_datetime(
+        market["date"],
+        errors="coerce",
+    )
+
+    dates = (
+        market["date"]
+        .dropna()
+        .dt.strftime(
+            "%Y-%m-%d"
         )
-        .dt.strftime("%Y-%m-%d")
+        .drop_duplicates()
+        .sort_values()
+        .tolist()
     )
 
-    market["date"] = (
-        pd.to_datetime(
-            market["date"],
-            errors="coerce",
-        )
-        .dt.strftime("%Y-%m-%d")
-    )
+    return dates
 
-    sentiment = sentiment.dropna(
-        subset=["date"]
-    )
 
-    market = market.dropna(
-        subset=["date"]
-    )
+def _first_trading_session_on_or_after(
+    date_text: str,
+    trading_dates: list[str],
+):
+    for trading_date in trading_dates:
 
-    return sentiment.merge(
-        market,
-        on="date",
-        how="inner",
-        validate="one_to_one",
-    )
+        if trading_date >= date_text:
+            return trading_date
+
+    return None
 
 
 def align_news_to_trading_sessions(
-    news_df,
-    market_df,
-):
+    news_df: pd.DataFrame,
+    market_df: pd.DataFrame,
+) -> pd.DataFrame:
     """
-    Align each news article with the relevant
-    subsequent US equity trading session.
+    Assign news to an information-relevant trading session.
 
     Rules:
 
-    pre-market:
-        same trading session
+    pre_market
+        -> same trading session
 
-    market-hours:
-        next trading session
+    market_hours
+        -> next trading session
 
-    after-market:
-        next trading session
+    after_market
+        -> next trading session
 
-    non-trading day:
-        next available trading session
+    non_trading_day
+        -> next trading session
+
+    Important:
+        This function determines the session assignment.
+        It does NOT establish causal or predictive validity
+        of a particular return target.
     """
 
     news = news_df.copy()
     market = market_df.copy()
 
-    # --------------------------------------------------
-    # NEWS
-    # --------------------------------------------------
-
-    news["published_at_et"] = pd.to_datetime(
-        news["published_at_et"],
+    news[
+        "published_at_et"
+    ] = pd.to_datetime(
+        news[
+            "published_at_et"
+        ],
         errors="coerce",
     )
 
     news = news.dropna(
-        subset=["published_at_et"]
+        subset=[
+            "published_at_et"
+        ]
     )
 
-    news["news_date"] = (
-        news["published_at_et"]
-        .dt.tz_localize(None)
-        .dt.strftime("%Y-%m-%d")
+    news[
+        "news_date"
+    ] = (
+        news[
+            "published_at_et"
+        ]
+        .dt.tz_localize(
+            None
+        )
+        .dt.strftime(
+            "%Y-%m-%d"
+        )
     )
-
-    # --------------------------------------------------
-    # MARKET
-    # --------------------------------------------------
 
     market["date"] = pd.to_datetime(
         market["date"],
@@ -108,95 +106,88 @@ def align_news_to_trading_sessions(
         subset=["date"]
     )
 
-    market["market_date"] = (
-        market["date"]
-        .dt.strftime("%Y-%m-%d")
+    market[
+        "market_date"
+    ] = (
+        market[
+            "date"
+        ].dt.strftime(
+            "%Y-%m-%d"
+        )
     )
-
-    # We don't need the original datetime column
-    # for the alignment itself.
-    market = market.drop(
-        columns=["date"]
-    )
-
-    # --------------------------------------------------
-    # TRADING CALENDAR
-    # --------------------------------------------------
 
     trading_dates = (
-        market["market_date"]
-        .drop_duplicates()
-        .sort_values()
-        .tolist()
+        _get_trading_dates(
+            market
+        )
     )
 
-    # --------------------------------------------------
-    # FIRST TRADING SESSION ON OR AFTER NEWS DATE
-    # --------------------------------------------------
-
-    def first_trading_session(news_date):
-        for trading_date in trading_dates:
-            if trading_date >= news_date:
-                return trading_date
-
-        return None
-
-    news["date"] = news["news_date"].apply(
-        first_trading_session
+    news[
+        "date"
+    ] = news[
+        "news_date"
+    ].apply(
+        lambda value:
+        _first_trading_session_on_or_after(
+            value,
+            trading_dates,
+        )
     )
-
-    # --------------------------------------------------
-    # NEXT TRADING SESSION
-    # --------------------------------------------------
 
     next_session_map = {
-        trading_dates[i]: (
-            trading_dates[i + 1]
-            if i + 1 < len(trading_dates)
+        trading_dates[index]:
+        (
+            trading_dates[index + 1]
+            if index + 1
+            < len(trading_dates)
             else None
         )
-        for i in range(len(trading_dates))
+        for index in range(
+            len(trading_dates)
+        )
     }
 
-    # --------------------------------------------------
-    # NEWS THAT CANNOT EXPLAIN THE CURRENT SESSION
-    # --------------------------------------------------
-
-    shift_mask = news[
-        "market_session"
-    ].isin(
-        [
-            "market_hours",
-            "after_market",
-            "non_trading_day",
-        ]
+    shift_mask = (
+        news[
+            "market_session"
+        ].isin(
+            [
+                "market_hours",
+                "after_market",
+                "non_trading_day",
+            ]
+        )
     )
 
     news.loc[
         shift_mask,
         "date",
-    ] = news.loc[
-        shift_mask,
-        "date",
-    ].map(
-        next_session_map
+    ] = (
+        news.loc[
+            shift_mask,
+            "date",
+        ].map(
+            next_session_map
+        )
     )
 
-    # --------------------------------------------------
-    # MERGE
-    # --------------------------------------------------
+    # Remove duplicate date column
+    # before merge.
+    market_for_merge = (
+        market.drop(
+            columns=[
+                "date"
+            ]
+        )
+    )
 
     aligned = news.merge(
-        market,
+        market_for_merge,
         left_on="date",
         right_on="market_date",
         how="left",
         validate="many_to_one",
     )
-
-    # --------------------------------------------------
-    # CLEANUP
-    # --------------------------------------------------
 
     aligned = aligned.drop(
         columns=[

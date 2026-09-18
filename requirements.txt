@@ -1,8 +1,10 @@
-requests
 pandas
+requests
 python-dotenv
 vaderSentiment
 yfinance
 streamlit
 plotly
+statsmodels
 scipy
+pytest

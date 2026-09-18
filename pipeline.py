@@ -1,36 +1,60 @@
 from src.data.collector import (
-    collect_news,
     append_news_data,
+    collect_news,
 )
-
-from src.data.process import process_news
+from src.data.process import (
+    process_news,
+)
 
 
 def main():
 
-    print("\n==============================")
-    print("FINANCIAL NEWS PIPELINE")
-    print("==============================\n")
+    print(
+        "\n=============================="
+    )
+    print(
+        "FINANCIAL NEWS PIPELINE"
+    )
+    print(
+        "=============================="
+    )
 
-    # --------------------------------
-    # 1. Collect
-    # --------------------------------
+    query = input(
+        "\nNews query [stock market]: "
+    ).strip()
 
-    print("1. Collecting news...")
+    if not query:
+        query = "stock market"
 
-    new_data = collect_news(
-        max_articles=10
+    print(
+        f"\n1. Collecting news..."
     )
 
     print(
-        f"   Retrieved: {len(new_data)} articles"
+        f"   Query: {query}"
     )
 
-    # --------------------------------
-    # 2. Store raw data
-    # --------------------------------
+    new_data = collect_news(
+        query=query,
+        max_articles=10,
+    )
 
-    print("\n2. Updating raw dataset...")
+    print(
+        f"   Retrieved: "
+        f"{len(new_data)} articles"
+    )
+
+    if new_data.empty:
+
+        print(
+            "\nNo articles returned."
+        )
+
+        return
+
+    print(
+        "\n2. Updating raw dataset..."
+    )
 
     raw_data = append_news_data(
         new_data
@@ -41,11 +65,9 @@ def main():
         f"{len(raw_data)}"
     )
 
-    # --------------------------------
-    # 3. Process
-    # --------------------------------
-
-    print("\n3. Processing sentiment...")
+    print(
+        "\n3. Processing sentiment..."
+    )
 
     processed_data = process_news()
 
@@ -54,16 +76,16 @@ def main():
         f"{len(processed_data)}"
     )
 
-    # --------------------------------
-    # 4. Summary
-    # --------------------------------
-
-    print("\n4. Sentiment distribution:\n")
+    print(
+        "\n4. Sentiment distribution:"
+    )
 
     print(
         processed_data[
             "sentiment"
-        ].value_counts()
+        ]
+        .value_counts()
+        .to_string()
     )
 
     print(

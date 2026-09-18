@@ -1,19 +1,15 @@
 import pandas as pd
 
 
-def create_session_features(aligned_df):
+def build_session_features(
+    aligned_df: pd.DataFrame,
+) -> pd.DataFrame:
     """
-    Aggregate article-level news sentiment into
-    trading-session-level features.
-
-    Each row represents one trading session.
+    Aggregate article-level news and market information
+    into trading-session-level features.
     """
 
     data = aligned_df.copy()
-
-    # --------------------------------------------------
-    # Basic validation
-    # --------------------------------------------------
 
     required_columns = [
         "date",
@@ -37,9 +33,9 @@ def create_session_features(aligned_df):
             f"Missing required columns: {missing}"
         )
 
-    # --------------------------------------------------
+    # ---------------------------------------------------------
     # Sentiment indicators
-    # --------------------------------------------------
+    # ---------------------------------------------------------
 
     data["is_positive"] = (
         data["sentiment"] == "Positive"
@@ -53,58 +49,25 @@ def create_session_features(aligned_df):
         data["sentiment"] == "Neutral"
     ).astype(int)
 
-    # --------------------------------------------------
-    # Session-level aggregation
-    # --------------------------------------------------
+    # ---------------------------------------------------------
+    # Aggregate article-level data by trading session
+    # ---------------------------------------------------------
 
     session = (
         data.groupby("date")
         .agg(
-            article_count=(
-                "title",
-                "count",
-            ),
-
-            mean_sentiment=(
-                "sentiment_score",
-                "mean",
-            ),
-
-            median_sentiment=(
-                "sentiment_score",
-                "median",
-            ),
-
-            sentiment_std=(
-                "sentiment_score",
-                "std",
-            ),
-
-            positive_articles=(
-                "is_positive",
-                "sum",
-            ),
-
-            negative_articles=(
-                "is_negative",
-                "sum",
-            ),
-
-            neutral_articles=(
-                "is_neutral",
-                "sum",
-            ),
-
-            market_return=(
-                "return",
-                "first",
-            ),
-
+            article_count=("title", "count"),
+            mean_sentiment=("sentiment_score", "mean"),
+            median_sentiment=("sentiment_score", "median"),
+            sentiment_std=("sentiment_score", "std"),
+            positive_articles=("is_positive", "sum"),
+            negative_articles=("is_negative", "sum"),
+            neutral_articles=("is_neutral", "sum"),
+            market_return=("return", "first"),
             next_trading_day_return=(
                 "next_trading_day_return",
                 "first",
             ),
-
             five_trading_day_forward_return=(
                 "five_trading_day_forward_return",
                 "first",
@@ -113,9 +76,9 @@ def create_session_features(aligned_df):
         .reset_index()
     )
 
-    # --------------------------------------------------
+    # ---------------------------------------------------------
     # Sentiment proportions
-    # --------------------------------------------------
+    # ---------------------------------------------------------
 
     session["positive_share"] = (
         session["positive_articles"]
@@ -132,36 +95,36 @@ def create_session_features(aligned_df):
         / session["article_count"]
     )
 
-    # --------------------------------------------------
-    # Sentiment intensity
-    # --------------------------------------------------
+    # ---------------------------------------------------------
+    # Overall sentiment intensity
+    # ---------------------------------------------------------
 
     session["sentiment_intensity"] = (
         session["mean_sentiment"].abs()
     )
 
-    # --------------------------------------------------
-    # Market-session-specific sentiment
-    # --------------------------------------------------
+    # ---------------------------------------------------------
+    # Sentiment by publication timing
+    # ---------------------------------------------------------
 
-    for market_session in [
+    session_types = [
         "pre_market",
         "market_hours",
         "after_market",
         "non_trading_day",
-    ]:
+    ]
+
+    for market_session in session_types:
 
         subset = data[
-            data["market_session"]
-            == market_session
+            data["market_session"] == market_session
         ]
 
         if subset.empty:
             continue
 
         grouped = (
-            subset.groupby("date")
-            ["sentiment_score"]
+            subset.groupby("date")["sentiment_score"]
             .mean()
             .rename(
                 f"{market_session}_sentiment"
@@ -173,5 +136,13 @@ def create_session_features(aligned_df):
             on="date",
             how="left",
         )
+
+    # ---------------------------------------------------------
+    # Sort chronologically
+    # ---------------------------------------------------------
+
+    session = session.sort_values(
+        "date"
+    ).reset_index(drop=True)
 
     return session

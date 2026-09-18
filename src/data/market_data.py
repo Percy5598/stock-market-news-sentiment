@@ -3,13 +3,15 @@ import yfinance as yf
 
 
 def get_market_data(
-    ticker="^GSPC",
-    start=None,
-    end=None,
-):
+    ticker: str = "^GSPC",
+    start: str | None = None,
+    end: str | None = None,
+) -> pd.DataFrame:
     """
-    Download historical market data and calculate
-    trading-session returns.
+    Download daily market data.
+
+    Default ticker:
+        ^GSPC = S&P 500 index
     """
 
     data = yf.download(
@@ -21,14 +23,17 @@ def get_market_data(
     )
 
     if data.empty:
+
         raise ValueError(
-            f"No market data returned for {ticker}."
+            f"No market data returned "
+            f"for {ticker}."
         )
 
     if isinstance(
         data.columns,
         pd.MultiIndex,
     ):
+
         data.columns = (
             data.columns
             .get_level_values(0)
@@ -54,22 +59,25 @@ def get_market_data(
         "date"
     )
 
-    # Close-to-close return
+    # Close-to-close daily return.
     data["return"] = (
         data["close"]
         .pct_change()
     )
 
-    # Return during the next actual trading session
-    data["next_trading_day_return"] = (
+    # Next trading session return.
+    data[
+        "next_trading_day_return"
+    ] = (
         data["return"]
         .shift(-1)
     )
 
-    # Five-trading-session forward return
-    data["five_trading_day_forward_return"] = (
-        data["close"]
-        .shift(-5)
+    # Five-session forward return.
+    data[
+        "five_trading_day_forward_return"
+    ] = (
+        data["close"].shift(-5)
         / data["close"]
         - 1
     )
@@ -86,4 +94,6 @@ def get_market_data(
             "next_trading_day_return",
             "five_trading_day_forward_return",
         ]
-    ]
+    ].reset_index(
+        drop=True
+    )

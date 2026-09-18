@@ -1,9 +1,20 @@
 from datetime import datetime, timedelta
 
-from src.news_api import get_financial_news
-from src.data.preprocessing import articles_to_dataframe
-from src.data.collector import append_news_data
+from src.data.collector import (
+    append_news_data,
+)
+from src.data.preprocessing import (
+    articles_to_dataframe,
+)
+from src.news_api import (
+    GNewsAPIError,
+    get_financial_news,
+)
 
+
+# --------------------------------------------------
+# CONFIGURATION
+# --------------------------------------------------
 
 START_DATE = "2026-09-17"
 END_DATE = "2026-09-17"
@@ -12,20 +23,18 @@ ARTICLES_PER_QUERY = 10
 
 QUERIES = [
     "stock market",
-    "S&P 500",
     "Wall Street",
-    "Federal Reserve",
-    "interest rates",
-    "Treasury yields",
-    "inflation",
-    "US economy",
-    "stock earnings",
-    "corporate earnings",
-    "oil prices",
+    '"Federal Reserve" OR inflation OR "interest rates"',
+    '"S&P 500" OR "Treasury yields" OR "oil prices"',
 ]
 
 
+# --------------------------------------------------
+# COLLECTION
+# --------------------------------------------------
+
 def main():
+
     start = datetime.strptime(
         START_DATE,
         "%Y-%m-%d",
@@ -36,17 +45,34 @@ def main():
         "%Y-%m-%d",
     )
 
+    if end < start:
+
+        raise ValueError(
+            "END_DATE must be on or after START_DATE."
+        )
+
     current = start
 
     total_retrieved = 0
+    successful_requests = 0
+    failed_requests = 0
 
-    print("\n==============================")
-    print("HISTORICAL NEWS COLLECTION")
-    print("==============================\n")
+    print(
+        "\n=============================="
+    )
+    print(
+        "HISTORICAL NEWS COLLECTION"
+    )
+    print(
+        "=============================="
+    )
 
     while current <= end:
 
-        next_day = current + timedelta(days=1)
+        next_day = (
+            current
+            + timedelta(days=1)
+        )
 
         from_date = (
             current.strftime(
@@ -62,7 +88,7 @@ def main():
 
         print(
             f"\nDATE: "
-            f"{current.strftime('%Y-%m-%d')}"
+            f"{current:%Y-%m-%d}"
         )
 
         for query in QUERIES:
@@ -73,51 +99,73 @@ def main():
 
             try:
 
-                articles = get_financial_news(
-                    query=query,
-                    max_articles=ARTICLES_PER_QUERY,
-                    from_date=from_date,
-                    to_date=to_date,
-                )
-
-                df = articles_to_dataframe(
-                    articles
-                )
-
-                if df.empty:
-
-                    print(
-                        "    Retrieved: 0"
+                articles = (
+                    get_financial_news(
+                        query=query,
+                        max_articles=(
+                            ARTICLES_PER_QUERY
+                        ),
+                        from_date=from_date,
+                        to_date=to_date,
                     )
+                )
 
-                    continue
+                df = (
+                    articles_to_dataframe(
+                        articles,
+                        collection_query=query,
+                    )
+                )
 
-                df["collection_query"] = query
+                append_news_data(
+                    df
+                )
 
-                append_news_data(df)
-
-                total_retrieved += len(df)
+                successful_requests += 1
+                total_retrieved += len(
+                    df
+                )
 
                 print(
                     f"    Retrieved: "
                     f"{len(df)}"
                 )
 
-            except Exception as error:
+            except GNewsAPIError as error:
+
+                failed_requests += 1
 
                 print(
                     f"    ERROR: {error}"
                 )
 
-        current += timedelta(days=1)
-
-    print("\n==============================")
-    print("COLLECTION COMPLETED")
-    print("==============================")
+        current += timedelta(
+            days=1
+        )
 
     print(
-        f"\nArticles retrieved: "
+        "\n=============================="
+    )
+    print(
+        "COLLECTION COMPLETED"
+    )
+    print(
+        "=============================="
+    )
+
+    print(
+        f"Articles retrieved: "
         f"{total_retrieved}"
+    )
+
+    print(
+        f"Successful requests: "
+        f"{successful_requests}"
+    )
+
+    print(
+        f"Failed requests: "
+        f"{failed_requests}"
     )
 
 

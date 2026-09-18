@@ -4,11 +4,16 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 analyzer = SentimentIntensityAnalyzer()
 
 
-def analyze_sentiment(text):
+def analyze_sentiment(text: str) -> dict:
     """
-    Analyze text using VADER.
+    Calculate VADER sentiment features.
 
-    Returns sentiment scores and classification.
+    Returns:
+        score: VADER compound score in [-1, 1]
+        label: Positive, Negative, or Neutral
+        positive: positive probability
+        negative: negative probability
+        neutral: neutral probability
     """
 
     if not text or not str(text).strip():
@@ -20,7 +25,9 @@ def analyze_sentiment(text):
             "neutral": 1.0,
         }
 
-    scores = analyzer.polarity_scores(str(text))
+    scores = analyzer.polarity_scores(
+        str(text)
+    )
 
     compound = scores["compound"]
 
