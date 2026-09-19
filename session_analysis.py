@@ -4,7 +4,7 @@ from src.analysis.market_sentiment import (
     align_news_to_trading_sessions,
 )
 from src.analysis.session_features import (
-    create_session_features,
+    build_session_features,
 )
 from src.analysis.temporal_alignment import (
     prepare_temporal_news_data,
@@ -126,7 +126,7 @@ def main():
     )
 
     session = (
-        create_session_features(
+        build_session_features(
             aligned
         )
     )
