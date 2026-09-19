@@ -1,5 +1,7 @@
 # Financial News Sentiment and Market Dynamics
 
+Demo: https://stock-market-news-sentiment.streamlit.app/
+
 An end-to-end NLP and financial analytics project examining the relationship between financial-news sentiment and US equity-market dynamics.
 
 ## Research question
